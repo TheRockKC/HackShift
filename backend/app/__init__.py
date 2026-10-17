@@ -1,1 +1,1 @@
-"""Smart Farming Platform - Backend Application Package."""
+"""AnnData - Backend Application Package."""

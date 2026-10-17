@@ -1,4 +1,4 @@
-"""Export all SQLAlchemy models for the Smart Farming Platform."""
+"""Export all SQLAlchemy models for AnnData."""
 
 from app.models.user import User
 from app.models.farm import Farm

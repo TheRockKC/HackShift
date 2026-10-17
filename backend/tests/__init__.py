@@ -1,1 +1,1 @@
-"""Tests package for Smart Farming Platform backend."""
+"""Tests package for AnnData backend."""

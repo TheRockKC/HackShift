@@ -1,6 +1,6 @@
-# Smart Farming Platform Backend
+# AnnData Backend
 
-FastAPI backend service powering the Smart Farming Platform, integrating:
+FastAPI backend service powering AnnData, integrating:
 - **CropClock:** Harvest listings, buyer offer submission, net earnings calculator, and acceptance workflows.
 - **FairQueue:** Agricultural machinery rental, conflict-free booking scheduler, and status lifecycle management.
 - **WaterWindow:** Rule-based irrigation advisor adapting to crop type, growth stage, soil texture, moisture, and rainfall alerts.

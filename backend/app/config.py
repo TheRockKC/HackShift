@@ -26,7 +26,7 @@ def normalize_db_url(url: str) -> str:
 
 
 class Settings:
-    PROJECT_NAME: str = "Smart Farming Platform API"
+    PROJECT_NAME: str = "AnnData API"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     PORT: int = int(os.getenv("PORT", "8000"))
     NEON_BRANCH: str = os.getenv("NEON_BRANCH", "production")

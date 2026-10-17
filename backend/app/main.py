@@ -14,8 +14,8 @@ from app.routers.scheme import router as scheme_router
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Smart Farming Platform API",
-    description="Backend services for CropClock, FairQueue, WaterWindow, FarmConnect Camps, and SchemeSaathi.",
+    title="AnnData API",
+    description="Backend services for AnnData: CropClock, FairQueue, WaterWindow, FarmConnect Camps, and SchemeSaathi.",
     version="0.1.0",
 )
 
@@ -39,7 +39,7 @@ app.include_router(scheme_router)
 @app.get("/")
 def read_root():
     return {
-        "message": "Welcome to Smart Farming Platform API",
+        "message": "Welcome to AnnData API",
         "docs_url": "/docs",
         "health_check": "/api/health",
     }
@@ -58,7 +58,7 @@ def health_check(db: Session = Depends(get_db)):
 
     return {
         "status": "ok",
-        "service": "smart-farming-backend",
+        "service": "anndata-backend",
         "database": {
             "status": db_status,
             "branch": settings.NEON_BRANCH if db_status == "connected" else "unknown",
