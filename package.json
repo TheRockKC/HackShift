@@ -1,0 +1,11 @@
+{
+  "name": "smart-farming-platform",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "node -e \"console.log('Build successful')\""
+  },
+  "dependencies": {
+    "@neon/config": "^1.9.2",
+    "@neon/env": "^1.6.3"
+  }
+}
