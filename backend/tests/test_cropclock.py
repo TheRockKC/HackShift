@@ -3,10 +3,12 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.database import SessionLocal
+from app.database import Base, get_db
 from app.models.user import User
 from app.models.farm import Farm
 from app.models.harvest import Harvest, BuyerOffer
@@ -58,10 +60,31 @@ class CropClockIntegrationTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.client = TestClient(app)
-        cls.db = SessionLocal()
+        cls.test_engine = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        cls.TestingSessionLocal = sessionmaker(
+            bind=cls.test_engine,
+            autocommit=False,
+            autoflush=False,
+            expire_on_commit=False,
+        )
+        Base.metadata.create_all(bind=cls.test_engine)
 
-        # Generate unique phone/emails to avoid collisions in Neon
+        def override_get_db():
+            db = cls.TestingSessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        cls.client = TestClient(app)
+        cls.db = cls.TestingSessionLocal()
+
+        # Generate unique phone/emails to avoid collisions
         unique_suffix = int(datetime.now(timezone.utc).timestamp())
         cls.farmer = User(
             name=f"Test Farmer {unique_suffix}",
@@ -124,6 +147,7 @@ class CropClockIntegrationTests(unittest.TestCase):
         except Exception:
             cls.db.rollback()
         finally:
+            app.dependency_overrides.clear()
             cls.db.close()
 
     def test_01_create_harvest_success(self):

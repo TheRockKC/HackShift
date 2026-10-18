@@ -35,6 +35,11 @@ from app.schemas.scheme import (
     SchemeMatchItem,
     FarmerSchemeMatchesResponse,
 )
+from app.schemas.disease import (
+    DiseaseDiagnosisResponse,
+    DiseaseDetectionItem,
+    PaginatedDiseaseDetectionResponse,
+)
 
 __all__ = [
     "HarvestCreate",
@@ -64,4 +69,7 @@ __all__ = [
     "FarmerProfileResponse",
     "SchemeMatchItem",
     "FarmerSchemeMatchesResponse",
+    "DiseaseDiagnosisResponse",
+    "DiseaseDetectionItem",
+    "PaginatedDiseaseDetectionResponse",
 ]

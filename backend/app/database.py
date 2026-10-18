@@ -4,9 +4,11 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from app.config import settings
 
 # In SQLAlchemy 2.x, pool_pre_ping checks connection health before checkout
+connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(

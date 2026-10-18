@@ -61,7 +61,7 @@ class PaginatedMachineryResponse(BaseModel):
 # -----------------------------------------------------------------------------
 
 class BookingCreate(BaseModel):
-    farmer_id: int = Field(..., description="User ID of the farmer requesting the booking")
+    farmer_id: Optional[int] = Field(None, description="User ID of the farmer requesting the booking")
     start_time: datetime = Field(..., description="Timezone-aware start time of rental")
     end_time: datetime = Field(..., description="Timezone-aware end time of rental")
 

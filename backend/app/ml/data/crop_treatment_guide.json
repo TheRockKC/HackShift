@@ -1,0 +1,104 @@
+{
+    "tomato": {
+        "Tomato___Bacterial_spot": {
+            "status": "Possible bacterial spot",
+            "recommendation": "Avoid working with wet plants, reduce leaf wetness, and remove heavily infected plant material where appropriate. Consult local agricultural experts about approved management."
+        },
+        "Tomato___Early_blight": {
+            "status": "Possible early blight",
+            "recommendation": "Remove heavily infected lower leaves, avoid overhead irrigation, rotate crops where possible, and seek advice on locally approved fungicides if disease pressure is significant."
+        },
+        "Tomato___Late_blight": {
+            "status": "Possible late blight",
+            "recommendation": "Act promptly because the disease can spread rapidly. Avoid handling wet plants, isolate affected material where feasible, and contact an agricultural expert for confirmation and control advice."
+        },
+        "Tomato___Leaf_Mold": {
+            "status": "Possible leaf mold",
+            "recommendation": "Improve airflow, avoid prolonged leaf wetness, and manage humidity. Seek local advice if the infection is spreading."
+        },
+        "Tomato___Septoria_leaf_spot": {
+            "status": "Possible Septoria leaf spot",
+            "recommendation": "Remove infected lower leaves where practical, avoid overhead watering, and maintain good field sanitation. Seek advice about approved treatments."
+        },
+        "Tomato___Spider_mites Two-spotted_spider_mite": {
+            "status": "Possible two-spotted spider mite damage",
+            "recommendation": "Inspect the undersides of leaves for mites and webbing. Use integrated pest management and seek local advice before applying a miticide; avoid unnecessarily harming beneficial insects."
+        },
+        "Tomato___Target_Spot": {
+            "status": "Possible target spot",
+            "recommendation": "Reduce leaf wetness, improve airflow, remove severely affected plant material where practical, and consult local experts about management."
+        },
+        "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {
+            "status": "Possible tomato yellow leaf curl virus",
+            "recommendation": "Inspect for whiteflies, which can spread the virus. Manage whiteflies using locally recommended integrated pest management. Remove severely affected plants where appropriate."
+        },
+        "Tomato___Tomato_mosaic_virus": {
+            "status": "Possible tomato mosaic virus",
+            "recommendation": "There is no curative treatment for infected plants. Sanitize tools, avoid handling plants after tobacco use, and seek advice on removing infected plants and preventing spread."
+        },
+        "Tomato___healthy": {
+            "status": "Healthy tomato",
+            "recommendation": "No disease-specific treatment indicated. Continue monitoring plants and maintain good irrigation and crop hygiene."
+        }
+    },
+    "wheat": {
+        "healthy_wheat": {
+            "status": "Healthy wheat",
+            "recommendation": "No disease-specific treatment indicated. Continue crop monitoring and good field hygiene."
+        },
+        "wheat_black_rust": {
+            "status": "Possible black rust",
+            "recommendation": "Inspect for dark rust pustules and seek local expert confirmation. Ask about locally approved management options."
+        },
+        "wheat_blast": {
+            "status": "Possible wheat blast",
+            "recommendation": "Seek prompt confirmation from an agricultural specialist. Follow locally recommended disease-management measures."
+        },
+        "wheat_brown_rust": {
+            "status": "Possible brown rust",
+            "recommendation": "Inspect for reddish-brown pustules and seek local agricultural advice about severity and appropriate approved control measures."
+        },
+        "wheat_fusarium_head_blight": {
+            "status": "Possible Fusarium head blight",
+            "recommendation": "Inspect wheat heads and seek expert guidance. Grain quality and mycotoxin contamination may be concerns; do not assume affected grain is safe."
+        },
+        "wheat_powdery_mildew": {
+            "status": "Possible powdery mildew",
+            "recommendation": "Look for white powdery growth on leaves and stems. Consult an agricultural expert about management based on crop stage and disease severity."
+        },
+        "wheat_smut": {
+            "status": "Possible wheat smut",
+            "recommendation": "Seek confirmation of the smut type. For future sowings, ask about certified seed and locally recommended seed treatments."
+        },
+        "wheat_yellow_rust": {
+            "status": "Possible yellow rust",
+            "recommendation": "Inspect for yellow-orange pustules in stripes and seek prompt local agricultural advice about monitoring and approved control measures."
+        }
+    },
+    "rice": {
+        "Bacterial Leaf Blight": {
+            "status": "Possible bacterial leaf blight",
+            "recommendation": "Use balanced fertilizer, avoid excessive nitrogen, maintain field sanitation, and consult local agricultural experts about resistant varieties and suitable management."
+        },
+        "Brown Spot": {
+            "status": "Possible brown spot",
+            "recommendation": "Check crop nutrition and water management. Use balanced fertilization and seek local advice about disease management and seed health."
+        },
+        "Healthy Rice Leaf": {
+            "status": "Healthy rice leaf",
+            "recommendation": "No disease-specific treatment indicated. Continue regular crop monitoring and appropriate field management."
+        },
+        "Leaf Blast": {
+            "status": "Possible rice blast",
+            "recommendation": "Avoid excessive nitrogen, monitor disease spread, and consult local agricultural experts about resistant varieties and approved control measures."
+        },
+        "Leaf scald": {
+            "status": "Possible rice leaf scald",
+            "recommendation": "Inspect additional leaves and assess disease spread. Maintain field sanitation where practical and seek local expert guidance on management."
+        },
+        "Sheath Blight": {
+            "status": "Possible rice sheath blight",
+            "recommendation": "Monitor affected sheaths, avoid excessive nitrogen, and consult local agricultural experts about suitable crop management and approved treatments."
+        }
+    }
+}

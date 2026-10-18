@@ -50,6 +50,7 @@ venv.bak/
 *.log
 *.sqlite
 *.sqlite3
+*.db
 
 # Testing and coverage
 .pytest_cache/

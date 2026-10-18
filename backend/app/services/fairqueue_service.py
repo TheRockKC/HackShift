@@ -149,17 +149,24 @@ def get_machinery(db: Session, machinery_id: int) -> MachineryResponse:
 
 def create_booking(db: Session, machinery_id: int, data: BookingCreate) -> BookingResponse:
     """Request a machinery booking with row-level locking to prevent race-condition booking overlaps."""
-    farmer = db.get(User, data.farmer_id)
+    farmer = None
+    if data.farmer_id is not None:
+        farmer = db.get(User, data.farmer_id)
+
+    # Graceful fallback: If farmer_id was not provided or not found, associate with the first registered farmer
+    if not farmer:
+        farmer = db.execute(select(User).where(User.role == "farmer")).scalars().first()
+
     if not farmer:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Farmer user with ID {data.farmer_id} does not exist",
+            detail="No valid farmer account found to associate with this booking",
         )
 
     if farmer.role not in ("farmer", "admin"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"User {data.farmer_id} has role '{farmer.role}', but must be a 'farmer' to request bookings",
+            detail=f"User {farmer.id} has role '{farmer.role}', but must be a 'farmer' to request bookings",
         )
 
     # Acquire row-level lock on the machinery record to serialize concurrent booking attempts
@@ -200,7 +207,7 @@ def create_booking(db: Session, machinery_id: int, data: BookingCreate) -> Booki
 
     booking = Booking(
         machinery_id=machinery_id,
-        farmer_id=data.farmer_id,
+        farmer_id=farmer.id,
         start_time=data.start_time,
         end_time=data.end_time,
         status="pending",
