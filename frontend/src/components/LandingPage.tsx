@@ -20,6 +20,7 @@ import {
   Leaf,
   Sprout,
 } from 'lucide-react';
+import heroBannerImg from '../assets/hero-banner.jpg';
 
 interface LandingPageProps {
   setActiveTab: (tab: string) => void;
@@ -175,25 +176,11 @@ export default function LandingPage({ setActiveTab }: LandingPageProps) {
           <div className="hero-visual-block">
             <div className="hero-image-card">
               <img
-                src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=1000&q=80"
-                alt="Indian farmer inspecting lush green crops at sunrise"
+                src={heroBannerImg}
+                alt="annData - Smart Agriculture Platform"
                 className="hero-farmer-photo"
                 loading="eager"
               />
-              <div className="hero-floating-card top-float">
-                <ScanLine size={20} className="float-icon-green" />
-                <div>
-                  <div className="float-title">{t('floatAiReady')}</div>
-                  <div className="float-sub">{t('floatAiCrops')}</div>
-                </div>
-              </div>
-              <div className="hero-floating-card bottom-float">
-                <TrendingUp size={20} className="float-icon-gold" />
-                <div>
-                  <div className="float-title">{t('floatMandi')}</div>
-                  <div className="float-sub">{t('floatZeroComm')}</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
