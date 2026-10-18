@@ -1,10 +1,9 @@
 // AnnData API Client
 
 const getBaseUrl = () => {
-  // If running via Vite proxy, default to window.location.origin or ''
   const customUrl = localStorage.getItem('anndata_api_url');
   if (customUrl) return customUrl.replace(/\/+$/, '');
-  return ''; // Relative path leverages Vite server proxy
+  return 'http://127.0.0.1:8000';
 };
 
 export const setCustomApiUrl = (url) => {
@@ -16,19 +15,22 @@ export const setCustomApiUrl = (url) => {
 };
 
 export const getSavedApiUrl = () => {
-  return localStorage.getItem('anndata_api_url') || 'http://localhost:8000';
+  return localStorage.getItem('anndata_api_url') || 'http://127.0.0.1:8000';
 };
 
 async function request(endpoint, options = {}) {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}${endpoint}`;
 
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const headers = { ...(options.headers || {}) };
+  if (!isFormData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const config = {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
+    headers,
   };
 
   try {
@@ -121,6 +123,8 @@ export const fairqueueApi = {
     if (params.is_available !== undefined && params.is_available !== 'all') {
       query.append('is_available', params.is_available);
     }
+    if (params.start_time) query.append('start_time', params.start_time);
+    if (params.end_time) query.append('end_time', params.end_time);
     if (params.page) query.append('page', params.page);
     if (params.page_size) query.append('page_size', params.page_size);
     return request(`/api/machinery?${query.toString()}`);
@@ -170,6 +174,15 @@ export const waterwindowApi = {
   },
 
   getPlan: (id) => request(`/api/irrigation/plans/${id}`),
+
+  getWeather: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.district) query.append('district', params.district);
+    if (params.state) query.append('state', params.state);
+    if (params.latitude) query.append('latitude', params.latitude);
+    if (params.longitude) query.append('longitude', params.longitude);
+    return request(`/api/irrigation/weather?${query.toString()}`);
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -226,3 +239,46 @@ export const schemeApi = {
       body: JSON.stringify(data),
     }),
 };
+
+// ---------------------------------------------------------------------------
+// Crop Disease Detection (ML Models)
+// ---------------------------------------------------------------------------
+export const diseaseApi = {
+  detectDisease: (formData) =>
+    request('/api/disease/detect', {
+      method: 'POST',
+      body: formData,
+    }),
+
+  getDetections: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.farm_id) query.append('farm_id', params.farm_id);
+    if (params.needs_expert_review !== undefined && params.needs_expert_review !== 'all') {
+      query.append('needs_expert_review', params.needs_expert_review);
+    }
+    if (params.page) query.append('page', params.page);
+    if (params.page_size) query.append('page_size', params.page_size);
+    return request(`/api/disease/detections?${query.toString()}`);
+  },
+
+  getDetection: (id) => request(`/api/disease/detections/${id}`),
+
+  getAssetsStatus: () => request('/api/disease/assets/status'),
+};
+
+// ---------------------------------------------------------------------------
+// Authentication & User Sync
+// ---------------------------------------------------------------------------
+export const authApi = {
+  register: (data) =>
+    request('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  login: (data) =>
+    request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+

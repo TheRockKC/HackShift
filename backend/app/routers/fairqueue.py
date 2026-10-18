@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
@@ -32,7 +33,7 @@ def create_machinery_endpoint(
 ):
     """Create a new machinery listing for rental or custom hiring.
 
-    - Verifies provider exists and has the 'machinery_provider' role.
+    - Verifies provider exists and has 'farmer' or 'machinery_provider' role.
     - Validates non-negative rates and requires at least one positive rate.
     - Sets initial listing availability to True.
     """
@@ -49,6 +50,8 @@ def list_machinery_endpoint(
     state: Optional[str] = Query(None, description="Filter by state (case-insensitive substring)"),
     district: Optional[str] = Query(None, description="Filter by district (case-insensitive substring)"),
     is_available: Optional[bool] = Query(None, description="Filter by availability status"),
+    start_time: Optional[datetime] = Query(None, description="Filter for machinery available during start time"),
+    end_time: Optional[datetime] = Query(None, description="Filter for machinery available up to end time"),
     page: int = Query(1, ge=1, description="Page number, 1-indexed"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
     db: Session = Depends(get_db),
@@ -60,6 +63,8 @@ def list_machinery_endpoint(
         state=state,
         district=district,
         is_available=is_available,
+        start_time=start_time,
+        end_time=end_time,
         page=page,
         page_size=page_size,
     )

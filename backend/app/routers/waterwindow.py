@@ -9,8 +9,28 @@ from app.schemas.waterwindow import (
     PaginatedIrrigationPlansResponse,
 )
 from app.services import waterwindow_service
+from app.services import weather_service
 
 router = APIRouter(tags=["WaterWindow - Intelligent Irrigation Planning"])
+
+
+@router.get(
+    "/api/irrigation/weather",
+    summary="Get live weather and autonomous rain prediction for a farm or district",
+)
+def get_irrigation_weather_endpoint(
+    district: Optional[str] = Query("Ludhiana", description="District or city name"),
+    state: Optional[str] = Query("Punjab", description="State name"),
+    latitude: Optional[float] = Query(None, description="Latitude"),
+    longitude: Optional[float] = Query(None, description="Longitude"),
+):
+    """Fetch real-time weather and automatic 48h rain prediction via meteorological API."""
+    return weather_service.fetch_weather_and_predict_rain(
+        district=district,
+        state=state,
+        latitude=latitude,
+        longitude=longitude,
+    )
 
 
 @router.post(

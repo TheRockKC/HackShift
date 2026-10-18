@@ -74,22 +74,6 @@ GENUINE_GOVERNMENT_SCHEMES: List[Dict[str, Any]] = [
         "verification_date": date(2026, 10, 18),
         "is_active": True,
     },
-    {
-        "slug": "kisan-credit-card",
-        "name": "Kisan Credit Card (KCC) Scheme",
-        "short_description": "Institutional revolving credit facility providing concessional short-term loans for crop production and allied farm activities.",
-        "benefits_summary": "Credit line up to ₹3,00,000 at a subsidized base rate of 7%, reduced to 4% effective interest per annum upon prompt repayment. Includes collateral-free loan access up to ₹2.0 Lakh (under revised RBI norms effective 2025) for agriculture and allied activities.",
-        "category": "credit",
-        "nodal_ministry": "Ministry of Agriculture and Farmers Welfare",
-        "state_applicability": "All India",
-        "min_land_acres": None,  # Open to owner cultivators, oral lessees, tenant farmers, and SHGs
-        "max_land_acres": None,  # No maximum land cap
-        "target_gender": None,   # Open to all genders
-        "target_social_categories": None,  # Open to all categories
-        "official_portal_url": "https://www.myscheme.gov.in/schemes/kisan-credit-card",
-        "verification_date": date(2026, 10, 18),
-        "is_active": True,
-    },
 ]
 
 

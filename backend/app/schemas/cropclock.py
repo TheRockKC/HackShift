@@ -20,6 +20,7 @@ class HarvestCreate(BaseModel):
 class HarvestResponse(BaseModel):
     id: int
     farm_id: int
+    farmer_id: Optional[int] = None
     crop: str
     quantity_kg: Decimal
     expected_harvest_date: date

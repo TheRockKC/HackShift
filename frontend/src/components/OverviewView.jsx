@@ -69,7 +69,7 @@ export default function OverviewView({ setActiveTab }) {
       icon: BookOpen,
       color: 'purple',
       description:
-        'Catalogue of verified Central & State agricultural schemes (PM-KISAN, PMFBY, SMAM, KCC) with landholding & profile eligibility matching.',
+        'Catalogue of verified Central & State agricultural schemes (PM-KISAN, PMFBY, SMAM) with landholding & profile eligibility matching.',
       actionLabel: 'Check Scheme Matches',
       features: ['Zero PII Required', 'Landholding Aggregator', 'Missing Info Guidance'],
     },

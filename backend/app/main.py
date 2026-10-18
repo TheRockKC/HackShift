@@ -13,6 +13,7 @@ from app.routers.waterwindow import router as waterwindow_router
 from app.routers.camp import router as camp_router
 from app.routers.scheme import router as scheme_router
 from app.routers.disease import router as disease_router
+from app.routers.auth import router as auth_router
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ app.add_middleware(
 )
 
 # Register module routers
+app.include_router(auth_router)
 app.include_router(cropclock_router)
 app.include_router(fairqueue_router)
 app.include_router(waterwindow_router)

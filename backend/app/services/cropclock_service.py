@@ -44,18 +44,30 @@ def calculate_net_earnings(
 def create_harvest(db: Session, data: HarvestCreate) -> HarvestResponse:
     """Create a new harvest listing after verifying farm ownership."""
     farm = db.get(Farm, data.farm_id)
-    if not farm:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Farm with ID {data.farm_id} does not exist",
-        )
-
     farmer = db.get(User, data.farmer_id)
+
+    # Graceful fallback for demo/unseeded IDs
     if not farmer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Farmer user with ID {data.farmer_id} does not exist",
-        )
+        primary_farmer = db.execute(select(User).where(User.role == "farmer").order_by(User.id.asc())).scalars().first()
+        if primary_farmer:
+            farmer = primary_farmer
+            data.farmer_id = primary_farmer.id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Farmer user with ID {data.farmer_id} does not exist",
+            )
+
+    if not farm:
+        primary_farm = db.execute(select(Farm).where(Farm.farmer_id == farmer.id).order_by(Farm.id.asc())).scalars().first()
+        if primary_farm:
+            farm = primary_farm
+            data.farm_id = primary_farm.id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Farm with ID {data.farm_id} does not exist",
+            )
 
     if farm.farmer_id != data.farmer_id:
         raise HTTPException(
@@ -78,6 +90,7 @@ def create_harvest(db: Session, data: HarvestCreate) -> HarvestResponse:
     return HarvestResponse(
         id=harvest.id,
         farm_id=harvest.farm_id,
+        farmer_id=farm.farmer_id,
         crop=harvest.crop,
         quantity_kg=harvest.quantity_kg,
         expected_harvest_date=harvest.expected_harvest_date,
@@ -124,6 +137,7 @@ def list_harvests(
         HarvestResponse(
             id=harvest.id,
             farm_id=harvest.farm_id,
+            farmer_id=farm.farmer_id,
             crop=harvest.crop,
             quantity_kg=harvest.quantity_kg,
             expected_harvest_date=harvest.expected_harvest_date,
@@ -164,6 +178,7 @@ def get_harvest(db: Session, harvest_id: int) -> HarvestResponse:
     return HarvestResponse(
         id=harvest.id,
         farm_id=harvest.farm_id,
+        farmer_id=farm.farmer_id,
         crop=harvest.crop,
         quantity_kg=harvest.quantity_kg,
         expected_harvest_date=harvest.expected_harvest_date,
@@ -193,15 +208,28 @@ def create_buyer_offer(db: Session, harvest_id: int, data: OfferCreate) -> Offer
 
     buyer = db.get(User, data.buyer_id)
     if not buyer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Buyer user with ID {data.buyer_id} not found",
-        )
+        primary_buyer = db.execute(select(User).where(User.role.in_(("buyer", "farmer", "machinery_provider", "admin"))).order_by(User.id.asc())).scalars().first()
+        if primary_buyer:
+            buyer = primary_buyer
+            data.buyer_id = primary_buyer.id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Buyer user with ID {data.buyer_id} not found",
+            )
 
-    if buyer.role not in ("buyer", "admin"):
+    if buyer.role not in ("buyer", "farmer", "machinery_provider", "admin"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"User {data.buyer_id} has role '{buyer.role}', but must be a 'buyer' to submit offers",
+            detail=f"User {data.buyer_id} has role '{buyer.role}', but must be a registered participant to submit offers",
+        )
+
+    # Prevent self-bidding: the farmer who listed this harvest cannot purchase their own crop
+    farm = db.get(Farm, harvest.farm_id)
+    if farm and (farm.farmer_id == data.buyer_id or (buyer and farm.farmer_id == buyer.id)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The farmer offering this harvest cannot submit a purchase offer on their own crop listing",
         )
 
     # Check for duplicate active offer

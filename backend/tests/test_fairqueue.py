@@ -123,9 +123,9 @@ class FairQueueIsolatedTests(unittest.TestCase):
         res = self.client.post("/api/machinery", json=bad_payload)
         self.assertEqual(res.status_code, 422)
 
-        # Unauthorized role (farmer cannot create machinery listings)
+        # Unauthorized role (buyer cannot create machinery listings)
         unauth_payload = {
-            "provider_id": self.farmer1.id,
+            "provider_id": self.buyer.id,
             "equipment_type": "Harvester",
             "hourly_rate": 1500.00,
             "state": "Punjab",
@@ -133,6 +133,20 @@ class FairQueueIsolatedTests(unittest.TestCase):
         }
         res_role = self.client.post("/api/machinery", json=unauth_payload)
         self.assertEqual(res_role.status_code, 400)
+
+        # Authorized farmer creates machinery listing successfully
+        farmer_payload = {
+            "provider_id": self.farmer1.id,
+            "equipment_type": "Rotavator",
+            "name": "Shaktiman Regular 7ft",
+            "hourly_rate": 450.00,
+            "daily_rate": 3200.00,
+            "state": "Punjab",
+            "district": "Sangrur",
+        }
+        res_farmer = self.client.post("/api/machinery", json=farmer_payload)
+        self.assertEqual(res_farmer.status_code, 201)
+        self.assertEqual(res_farmer.json()["provider_name"], "Harpreet Singh Farmer")
 
     def test_03_browse_and_filter_machinery(self):
         # Create two listings
@@ -359,6 +373,61 @@ class FairQueueIsolatedTests(unittest.TestCase):
         ]
         for route in expected_routes:
             self.assertIn(route, paths)
+
+    def test_09_time_filtering_and_active_bookings(self):
+        m = Machinery(
+            provider_id=self.provider.id,
+            equipment_type="Drone Sprayer",
+            name="AgriBot 16L",
+            hourly_rate=Decimal("1200.00"),
+            state="Punjab",
+            district="Ludhiana",
+            is_available=True,
+        )
+        self.db.add(m)
+        self.db.commit()
+        self.db.refresh(m)
+
+        start = datetime(2026, 12, 1, 9, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=3)
+
+        booking = Booking(
+            machinery_id=m.id,
+            farmer_id=self.farmer1.id,
+            start_time=start,
+            end_time=end,
+            status="confirmed",
+        )
+        self.db.add(booking)
+        self.db.commit()
+
+        # 1. Querying without time filter returns the machinery with active_bookings populated
+        res_all = self.client.get("/api/machinery?equipment_type=Drone")
+        self.assertEqual(res_all.status_code, 200)
+        items = res_all.json()["items"]
+        self.assertEqual(len(items), 1)
+        self.assertEqual(len(items[0]["active_bookings"]), 1)
+        self.assertEqual(items[0]["active_bookings"][0]["status"], "confirmed")
+
+        # 2. Querying during the reserved slot excludes the booked machinery
+        t_start = (start + timedelta(hours=1)).isoformat()
+        t_end = (end + timedelta(hours=1)).isoformat()
+        res_conflict = self.client.get(
+            "/api/machinery",
+            params={"equipment_type": "Drone", "start_time": t_start, "end_time": t_end},
+        )
+        self.assertEqual(res_conflict.status_code, 200)
+        self.assertEqual(res_conflict.json()["total"], 0)
+
+        # 3. Querying outside the reserved slot returns the machinery
+        t_free_start = (end + timedelta(hours=1)).isoformat()
+        t_free_end = (end + timedelta(hours=4)).isoformat()
+        res_free = self.client.get(
+            "/api/machinery",
+            params={"equipment_type": "Drone", "start_time": t_free_start, "end_time": t_free_end},
+        )
+        self.assertEqual(res_free.status_code, 200)
+        self.assertEqual(res_free.json()["total"], 1)
 
 
 if __name__ == "__main__":

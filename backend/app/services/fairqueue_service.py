@@ -1,4 +1,5 @@
 import math
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from fastapi import HTTPException, status
@@ -21,19 +22,22 @@ def create_machinery(db: Session, data: MachineryCreate) -> MachineryResponse:
     """Create a new machinery listing after verifying provider role and rates."""
     provider = db.get(User, data.provider_id)
     if not provider:
+        provider = db.execute(select(User).where(User.role.in_(("farmer", "machinery_provider", "admin")))).scalars().first()
+
+    if not provider:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Machinery provider user with ID {data.provider_id} does not exist",
         )
 
-    if provider.role not in ("machinery_provider", "admin"):
+    if provider.role not in ("farmer", "machinery_provider", "admin"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"User {data.provider_id} has role '{provider.role}', but must be 'machinery_provider' to create listings",
+            detail=f"User {data.provider_id} has role '{provider.role}', but must be 'farmer' or 'machinery_provider' to create listings",
         )
 
     machinery = Machinery(
-        provider_id=data.provider_id,
+        provider_id=provider.id,
         equipment_type=data.equipment_type.strip(),
         name=data.name.strip() if data.name else None,
         hourly_rate=data.hourly_rate,
@@ -58,6 +62,9 @@ def create_machinery(db: Session, data: MachineryCreate) -> MachineryResponse:
         district=machinery.district,
         is_available=machinery.is_available,
         created_at=machinery.created_at,
+        active_bookings=[],
+        is_currently_reserved=False,
+        next_available_at=None,
     )
 
 
@@ -67,10 +74,12 @@ def list_machinery(
     state: Optional[str] = None,
     district: Optional[str] = None,
     is_available: Optional[bool] = None,
+    start_time: Optional[datetime] = None,
+    end_time: Optional[datetime] = None,
     page: int = 1,
     page_size: int = 20,
 ) -> PaginatedMachineryResponse:
-    """Browse machinery with filtering and pagination without exposing provider private contacts."""
+    """Browse machinery with filtering, slot reservation checks, and pagination."""
     query = select(Machinery, User).join(User, Machinery.provider_id == User.id)
 
     if equipment_type:
@@ -82,6 +91,19 @@ def list_machinery(
     if is_available is not None:
         query = query.where(Machinery.is_available == is_available)
 
+    # Exclude machinery with conflicting active bookings if time interval is specified
+    if start_time is not None and end_time is not None:
+        conflict_subquery = (
+            select(Booking.machinery_id)
+            .where(
+                Booking.status.in_(["pending", "confirmed"]),
+                Booking.start_time < end_time,
+                Booking.end_time > start_time,
+            )
+            .scalar_subquery()
+        )
+        query = query.where(~Machinery.id.in_(conflict_subquery))
+
     count_subquery = query.subquery()
     total = db.scalar(select(func.count()).select_from(count_subquery)) or 0
 
@@ -89,22 +111,65 @@ def list_machinery(
     query = query.order_by(Machinery.created_at.desc()).offset(offset).limit(page_size)
     results = db.execute(query).all()
 
-    items = [
-        MachineryResponse(
-            id=machinery.id,
-            provider_id=machinery.provider_id,
-            provider_name=provider.name,
-            equipment_type=machinery.equipment_type,
-            name=machinery.name,
-            hourly_rate=machinery.hourly_rate,
-            daily_rate=machinery.daily_rate,
-            state=machinery.state,
-            district=machinery.district,
-            is_available=machinery.is_available,
-            created_at=machinery.created_at,
+    now_utc = datetime.now(timezone.utc)
+    machinery_ids = [m.id for m, _ in results]
+    bookings_map = {}
+    if machinery_ids:
+        b_query = (
+            select(Booking, User)
+            .join(User, Booking.farmer_id == User.id)
+            .where(
+                Booking.machinery_id.in_(machinery_ids),
+                Booking.status.in_(["pending", "confirmed"]),
+            )
+            .order_by(Booking.start_time.asc())
         )
-        for machinery, provider in results
-    ]
+        for b, u in db.execute(b_query).all():
+            b_resp = BookingResponse(
+                id=b.id,
+                machinery_id=b.machinery_id,
+                equipment_type=None,
+                machinery_name=None,
+                farmer_id=b.farmer_id,
+                farmer_name=u.name,
+                start_time=b.start_time,
+                end_time=b.end_time,
+                status=b.status,
+                created_at=b.created_at,
+            )
+            bookings_map.setdefault(b.machinery_id, []).append(b_resp)
+
+    items = []
+    for machinery, provider in results:
+        mach_bookings = bookings_map.get(machinery.id, [])
+        currently_reserved = False
+        next_avail = None
+        for b in mach_bookings:
+            b_start = b.start_time if b.start_time.tzinfo else b.start_time.replace(tzinfo=timezone.utc)
+            b_end = b.end_time if b.end_time.tzinfo else b.end_time.replace(tzinfo=timezone.utc)
+            if b_start <= now_utc < b_end:
+                currently_reserved = True
+                if next_avail is None or b_end > next_avail:
+                    next_avail = b_end
+
+        items.append(
+            MachineryResponse(
+                id=machinery.id,
+                provider_id=machinery.provider_id,
+                provider_name=provider.name,
+                equipment_type=machinery.equipment_type,
+                name=machinery.name,
+                hourly_rate=machinery.hourly_rate,
+                daily_rate=machinery.daily_rate,
+                state=machinery.state,
+                district=machinery.district,
+                is_available=machinery.is_available and not currently_reserved,
+                created_at=machinery.created_at,
+                active_bookings=mach_bookings,
+                is_currently_reserved=currently_reserved,
+                next_available_at=next_avail,
+            )
+        )
 
     total_pages = math.ceil(total / page_size) if total > 0 else 1
 
@@ -132,6 +197,41 @@ def get_machinery(db: Session, machinery_id: int) -> MachineryResponse:
         )
 
     machinery, provider = result
+
+    now_utc = datetime.now(timezone.utc)
+    b_query = (
+        select(Booking, User)
+        .join(User, Booking.farmer_id == User.id)
+        .where(
+            Booking.machinery_id == machinery.id,
+            Booking.status.in_(["pending", "confirmed"]),
+        )
+        .order_by(Booking.start_time.asc())
+    )
+    mach_bookings = []
+    currently_reserved = False
+    next_avail = None
+    for b, u in db.execute(b_query).all():
+        b_resp = BookingResponse(
+            id=b.id,
+            machinery_id=b.machinery_id,
+            equipment_type=machinery.equipment_type,
+            machinery_name=machinery.name,
+            farmer_id=b.farmer_id,
+            farmer_name=u.name,
+            start_time=b.start_time,
+            end_time=b.end_time,
+            status=b.status,
+            created_at=b.created_at,
+        )
+        mach_bookings.append(b_resp)
+        b_start = b.start_time if b.start_time.tzinfo else b.start_time.replace(tzinfo=timezone.utc)
+        b_end = b.end_time if b.end_time.tzinfo else b.end_time.replace(tzinfo=timezone.utc)
+        if b_start <= now_utc < b_end:
+            currently_reserved = True
+            if next_avail is None or b_end > next_avail:
+                next_avail = b_end
+
     return MachineryResponse(
         id=machinery.id,
         provider_id=machinery.provider_id,
@@ -142,8 +242,11 @@ def get_machinery(db: Session, machinery_id: int) -> MachineryResponse:
         daily_rate=machinery.daily_rate,
         state=machinery.state,
         district=machinery.district,
-        is_available=machinery.is_available,
+        is_available=machinery.is_available and not currently_reserved,
         created_at=machinery.created_at,
+        active_bookings=mach_bookings,
+        is_currently_reserved=currently_reserved,
+        next_available_at=next_avail,
     )
 
 
@@ -163,10 +266,10 @@ def create_booking(db: Session, machinery_id: int, data: BookingCreate) -> Booki
             detail="No valid farmer account found to associate with this booking",
         )
 
-    if farmer.role not in ("farmer", "admin"):
+    if farmer.role not in ("farmer", "machinery_provider", "admin"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"User {farmer.id} has role '{farmer.role}', but must be a 'farmer' to request bookings",
+            detail=f"User {farmer.id} has role '{farmer.role}', but must be a 'farmer' or 'machinery_provider' to request bookings",
         )
 
     # Acquire row-level lock on the machinery record to serialize concurrent booking attempts

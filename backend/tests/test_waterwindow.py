@@ -282,12 +282,42 @@ class WaterWindowIsolatedApiTests(unittest.TestCase):
         paths = res.json()["paths"]
 
         expected_routes = [
+            "/api/irrigation/weather",
             "/api/irrigation/plan",
             "/api/irrigation/plans",
             "/api/irrigation/plans/{plan_id}",
         ]
         for route in expected_routes:
             self.assertIn(route, paths)
+
+    def test_09_weather_endpoint_and_autonomous_rain_prediction(self):
+        # 1. Test GET /api/irrigation/weather
+        res_weather = self.client.get("/api/irrigation/weather?district=Ludhiana&state=Punjab")
+        self.assertEqual(res_weather.status_code, 200)
+        w_data = res_weather.json()
+        self.assertIn("temperature", w_data)
+        self.assertIn("humidity", w_data)
+        self.assertIn("is_rain_forecasted", w_data)
+        self.assertIn("tubewell_advice", w_data)
+        self.assertIsInstance(w_data["forecast_days"], list)
+
+        # 2. Test POST /api/irrigation/plan without supplying forecasted_rain_expected
+        # System must autonomously predict rain and generate advisory
+        payload = {
+            "farm_id": self.farm.id,
+            "farmer_id": self.farmer.id,
+            "crop": "Rice",
+            "growth_stage": "vegetative",
+            "soil_type": "clay",
+            "observed_soil_moisture": "adequate",
+            # Note: forecasted_rain_expected is omitted so Weather AI auto-predicts
+        }
+        res_plan = self.client.post("/api/irrigation/plan", json=payload)
+        self.assertEqual(res_plan.status_code, 201)
+        plan_data = res_plan.json()
+        self.assertEqual(plan_data["crop"], "Rice")
+        self.assertIn("Weather AI Radar", plan_data["reason"])
+        self.assertIsNotNone(plan_data["recommended_action"])
 
 
 if __name__ == "__main__":

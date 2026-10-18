@@ -32,30 +32,6 @@ class MachineryCreate(BaseModel):
         return self
 
 
-class MachineryResponse(BaseModel):
-    id: int
-    provider_id: int
-    provider_name: Optional[str] = None
-    equipment_type: str
-    name: Optional[str] = None
-    hourly_rate: Optional[Decimal] = None
-    daily_rate: Optional[Decimal] = None
-    state: str
-    district: str
-    is_available: bool
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class PaginatedMachineryResponse(BaseModel):
-    items: List[MachineryResponse]
-    total: int
-    page: int
-    page_size: int
-    total_pages: int
-
-
 # -----------------------------------------------------------------------------
 # Booking Schemas
 # -----------------------------------------------------------------------------
@@ -92,3 +68,34 @@ class BookingResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# -----------------------------------------------------------------------------
+# Machinery Schemas
+# -----------------------------------------------------------------------------
+
+class MachineryResponse(BaseModel):
+    id: int
+    provider_id: int
+    provider_name: Optional[str] = None
+    equipment_type: str
+    name: Optional[str] = None
+    hourly_rate: Optional[Decimal] = None
+    daily_rate: Optional[Decimal] = None
+    state: str
+    district: str
+    is_available: bool
+    created_at: datetime
+    active_bookings: List[BookingResponse] = Field(default_factory=list, description="Active or upcoming reservations")
+    is_currently_reserved: bool = Field(default=False, description="Whether currently occupied in a reserved time slot")
+    next_available_at: Optional[datetime] = Field(default=None, description="When the machine becomes available if currently reserved")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedMachineryResponse(BaseModel):
+    items: List[MachineryResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

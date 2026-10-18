@@ -277,6 +277,56 @@ class CropClockIntegrationTests(unittest.TestCase):
         self.assertEqual(res.json()["status"], "ok")
         self.assertEqual(res.json()["database"]["status"], "connected")
 
+    def test_10_farmer_can_submit_buyer_offer(self):
+        # Create a second available harvest
+        payload_h = {
+            "farm_id": self.farm.id,
+            "farmer_id": self.farmer.id,
+            "crop": "Golden Maize",
+            "quantity_kg": 1500.00,
+            "expected_harvest_date": str(date.today()),
+        }
+        res_h = self.client.post("/api/harvests", json=payload_h)
+        self.assertEqual(res_h.status_code, 201)
+        h_id = res_h.json()["id"]
+        self.created_harvest_ids.append(h_id)
+
+        # Farmer user submits an offer as buyer
+        payload_offer = {
+            "buyer_id": self.other_farmer.id,
+            "price_per_kg": 28.00,
+            "transport_cost": 400.00,
+            "other_costs": 100.00,
+        }
+        res_offer = self.client.post(f"/api/harvests/{h_id}/offers", json=payload_offer)
+        self.assertEqual(res_offer.status_code, 201)
+        self.assertEqual(res_offer.json()["buyer_id"], self.other_farmer.id)
+
+    def test_11_farmer_cannot_bid_on_own_harvest(self):
+        # Create a harvest belonging to self.farmer
+        payload_h = {
+            "farm_id": self.farm.id,
+            "farmer_id": self.farmer.id,
+            "crop": "Organic Mustard",
+            "quantity_kg": 800.00,
+            "expected_harvest_date": str(date.today()),
+        }
+        res_h = self.client.post("/api/harvests", json=payload_h)
+        self.assertEqual(res_h.status_code, 201)
+        h_id = res_h.json()["id"]
+        self.created_harvest_ids.append(h_id)
+
+        # Attempting to submit offer on own harvest must be rejected with 400 Bad Request
+        payload_self_bid = {
+            "buyer_id": self.farmer.id,
+            "price_per_kg": 50.00,
+            "transport_cost": 0.00,
+            "other_costs": 0.00,
+        }
+        res_self_bid = self.client.post(f"/api/harvests/{h_id}/offers", json=payload_self_bid)
+        self.assertEqual(res_self_bid.status_code, 400)
+        self.assertIn("cannot submit a purchase offer on their own crop listing", res_self_bid.json()["detail"])
+
 
 class CropClockOpenAPITests(unittest.TestCase):
     """Verify that all CropClock endpoints are exposed in OpenAPI documentation."""

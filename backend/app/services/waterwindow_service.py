@@ -1,3 +1,4 @@
+import logging
 import math
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Tuple
@@ -14,6 +15,9 @@ from app.schemas.waterwindow import (
     IrrigationPlanResponse,
     PaginatedIrrigationPlansResponse,
 )
+from app.services import weather_service
+
+logger = logging.getLogger(__name__)
 
 
 def evaluate_irrigation_recommendation(
@@ -22,6 +26,7 @@ def evaluate_irrigation_recommendation(
     soil_type: Optional[str] = None,
     observed_soil_moisture: Optional[str] = None,
     forecasted_rain_expected: Optional[bool] = None,
+    weather_summary: Optional[str] = None,
 ) -> Tuple[str, Optional[datetime], str]:
     """Deterministic, explainable rule engine for prototype irrigation planning.
 
@@ -101,6 +106,9 @@ def evaluate_irrigation_recommendation(
         elif "loam" in st:
             modifiers.append(f"Soil texture ({soil_type}): Ideal balanced water holding capacity.")
 
+    if weather_summary:
+        modifiers.append(weather_summary)
+
     # Assemble explainable rationale
     reason_parts = [base_reason]
     if modifiers:
@@ -142,12 +150,39 @@ def create_irrigation_plan(db: Session, data: IrrigationPlanCreate) -> Irrigatio
             detail=f"Farmer with ID {data.farmer_id} does not own farm {data.farm_id}",
         )
 
+    # Autonomous Weather Integration:
+    rain_expected = data.forecasted_rain_expected
+    weather_summary = None
+
+    try:
+        weather_data = weather_service.fetch_weather_and_predict_rain(
+            district=farm.district,
+            state=farm.state,
+            latitude=float(farm.latitude) if farm.latitude is not None else None,
+            longitude=float(farm.longitude) if farm.longitude is not None else None,
+        )
+        if rain_expected is None:
+            # Self-predict rain using meteorological forecast
+            rain_expected = weather_data.get("is_rain_forecasted", False)
+
+        weather_summary = (
+            f"Weather AI Radar ({weather_data.get('location')}): {weather_data.get('condition')} {weather_data.get('icon')}, "
+            f"Temp: {weather_data.get('temperature')}°C, Humidity: {weather_data.get('humidity')}%, "
+            f"48h Rain Risk: {weather_data.get('rain_probability_48h')}% ({weather_data.get('rainfall_48h_mm')}mm in 48h). "
+            f"{weather_data.get('tubewell_advice')}"
+        )
+    except Exception as exc:
+        logger.warning("Could not auto-fetch live weather for farm %s: %s", farm.id, exc)
+        if rain_expected is None:
+            rain_expected = False
+
     action, scheduled_at, reason = evaluate_irrigation_recommendation(
         crop=data.crop,
         growth_stage=data.growth_stage,
         soil_type=data.soil_type,
         observed_soil_moisture=data.observed_soil_moisture,
-        forecasted_rain_expected=data.forecasted_rain_expected,
+        forecasted_rain_expected=rain_expected,
+        weather_summary=weather_summary,
     )
 
     plan = IrrigationPlan(

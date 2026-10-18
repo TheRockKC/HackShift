@@ -107,13 +107,6 @@ class SeedSchemesIsolatedTests(unittest.TestCase):
         self.assertEqual(smam.official_portal_url, "https://agrimachinery.nic.in")
         self.assertEqual(smam.category, "machinery_subsidy")
 
-        # Verify attributes on KCC (revised 2025 limit of ₹2.0 Lakh)
-        kcc = self.db.scalar(select(Scheme).where(Scheme.slug == "kisan-credit-card"))
-        self.assertIsNotNone(kcc)
-        self.assertEqual(kcc.official_portal_url, "https://www.myscheme.gov.in/schemes/kisan-credit-card")
-        self.assertEqual(kcc.category, "credit")
-        self.assertIn("2.0 Lakh", kcc.benefits_summary)
-
     def test_03_idempotency_second_run_does_not_duplicate(self):
         # 1st run
         res1 = seed_schemes(self.db, dry_run=False)
@@ -193,11 +186,10 @@ class SeedSchemesIsolatedTests(unittest.TestCase):
         matches_data = matches_res.json()
         matched_slugs = [m["slug"] for m in matches_data["matches"]]
 
-        # All 4 nationwide genuine schemes should match for Mohan Lal
+        # All 3 nationwide genuine schemes should match for Mohan Lal
         self.assertIn("pm-kisan", matched_slugs)
         self.assertIn("pmfby", matched_slugs)
         self.assertIn("smam", matched_slugs)
-        self.assertIn("kisan-credit-card", matched_slugs)
 
 
 if __name__ == "__main__":
